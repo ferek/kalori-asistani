@@ -1,0 +1,44 @@
+import streamlit as st
+import os
+from google import genai
+
+# Sayfa Yapısı
+st.set_page_config(page_title="AI Kalori Asistanı", page_icon="🥗", layout="centered")
+
+# İnternete yüklediğimizde şifreli API anahtarını okuyacak kısım
+API_KEY = os.environ.get("GEMINI_API_KEY")
+
+st.title("🥗 Yapay Zeka Destekli Kalori Asistanı")
+st.write("Bugün ne yediğini yaz, yapay zeka senin için kalori ve makro değerlerini çıkarsın!")
+
+user_input = st.text_area("Örn: Sabah 2 yumurta yedim, öğlen bir porsiyon tavuk sote ve ayran içtim.", height=120)
+
+if st.button("Kalorileri Hesapla", type="primary"):
+    if not API_KEY:
+        st.error("API Anahtarı bulunamadı! Lütfen Streamlit ayarlarından GEMINI_API_KEY tanımlayın.")
+    elif user_input.strip() == "":
+        st.warning("Lütfen önce ne yediğinizi yazın.")
+    else:
+        with st.spinner("Yedikleriniz analiz ediliyor..."):
+            try:
+                # Güvenli client başlatma
+                client = genai.Client(api_key=API_KEY)
+                
+                prompt = f"""
+                Aşağıda kullanıcının yediklerini içeren bir metin verilmiştir: "{user_input}"
+                1. Yiyecekleri tespit et.
+                2. Kalori, Protein, Karbonhidrat, Yağ değerlerini hesapla.
+                3. Markdown formatında şık bir tablo olarak sun.
+                4. Altına Toplam değerleri kalın harflerle yaz.
+                5. En sona 1 cümlelik kısa diyetisyen tavsiyesi ekle.
+                Cevabı doğrudan Türkçe ver.
+                """
+                
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt,
+                )
+                st.success("Analiz Tamamlandı!")
+                st.markdown(response.text)
+            except Exception as e:
+                st.error(f"Bir hata oluştu: {e}")
